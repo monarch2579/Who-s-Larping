@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Who's Larping - The Ultimate Social Deduction Party Game. Play with friends in-person with hundreds of categories.">
+  <meta name="theme-color" content="#07040b">
+  <title>Who's Larping | Social Deduction Party Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Particle Effects -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div id="app">
+    
+    <!-- Accessibility / Utilities Header -->
+    <header class="accessibility-bar">
+      <button id="btn-rules" title="Game Rules" aria-label="Game Rules">📜</button>
+      <button id="btn-toggle-contrast" title="Toggle High Contrast" aria-label="Toggle High Contrast">👁️</button>
+      <button id="btn-toggle-colorblind" title="Toggle Colorblind Mode" aria-label="Toggle Colorblind Mode">🎨</button>
+      <button id="btn-text-resize" title="Adjust Text Size" aria-label="Adjust Text Size">A±</button>
+      <button id="btn-mute" title="Mute Sound" aria-label="Mute Sound">🔊</button>
+    </header>
+
+    <!-- 1. Lobby Screen -->
+    <main id="screen-lobby" class="screen active">
+      <div class="logo-container">
+        <div class="logo-icon">🕵️‍♂️</div>
+        <h1>WHO'S LARPING</h1>
+        <div class="tagline">Can you spot the imposters?</div>
+      </div>
+      <p style="text-align: center;">A social deduction game of lies, bluffs, and clever clues for 3-20 players. Play in-person with your friends!</p>
+      
+      <div class="menu-list">
+        <button id="lobby-btn-play" class="primary">🎮 Play Game</button>
+        <button id="lobby-btn-custom" class="secondary">📁 Custom Packs</button>
+        <button id="lobby-btn-instructions">📖 How to Play</button>
+      </div>
+    </main>
+
+    <!-- 2. Setup Screen -->
+    <section id="screen-setup" class="screen">
+      <h2>Game Configuration</h2>
+      
+      <!-- Mode Selection -->
+      <div class="setup-group">
+        <h3>1. SELECT GAME MODE</h3>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+          <button id="setup-mode-word" class="primary" style="flex: 1;">Mode A: Word</button>
+          <button id="setup-mode-question" style="flex: 1;">Mode B: Question</button>
+        </div>
+      </div>
+
+      <!-- Player Count Setup -->
+      <div class="setup-group">
+        <h3>2. PLAYERS (<span id="setup-player-count-label">4</span>)</h3>
+        <div class="player-list-setup" id="setup-player-list">
+          <!-- Dynamic Player List Inputs -->
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <button id="setup-btn-add-player" class="secondary" style="flex: 1;">➕ Add Player</button>
+        </div>
+      </div>
+
+      <!-- Imposters Count -->
+      <div class="setup-group">
+        <div class="toggle-row">
+          <h3>3. IMPOSTER COUNT</h3>
+          <div class="stepper-container">
+            <button id="setup-btn-imposter-minus">-</button>
+            <span id="setup-imposter-value">1</span>
+            <button id="setup-btn-imposter-plus">+</button>
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-top: 0.2rem;">
+          <span style="font-size: var(--text-sm);">Secret Random Imposter Count</span>
+          <label class="switch">
+            <input type="checkbox" id="setup-toggle-random-imposters">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p id="setup-imposter-warning" style="color: var(--yellow); font-size: var(--text-xs); display: none;">
+          ⚠️ Warning: High ratio of imposters (>40%) may lead to chaotic rounds!
+        </p>
+      </div>
+
+            <!-- Settings -->
+      <div class="setup-group" style="border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <h3>4. SYSTEM OPTIONS</h3>
+        
+        <div class="toggle-row" style="margin-top: 0.5rem;">
+          <span style="color: var(--red); font-weight: 600;">Enable 18+ Content</span>
+          <label class="switch">
+            <input type="checkbox" id="setup-toggle-adult">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <button id="setup-btn-back" style="flex: 1;">⬅️ Lobby</button>
+        <button id="setup-btn-next" class="primary" style="flex: 2;">Choose Topic ➡️</button>
+      </div>
+    </section>
+
+    <!-- 3. Topic Selection Screen -->
+    <section id="screen-topics" class="screen">
+      <h2>Select Topic Category</h2>
+      
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="topics-search" placeholder="🔍 Search categories...">
+      </div>
+
+      <div class="category-grid" id="topics-grid">
+        <!-- Dynamic Category Cards -->
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <button id="topics-btn-random" class="secondary">🎲 Pick Random Topic</button>
+        <div style="display: flex; gap: 1rem;">
+          <button id="topics-btn-back" style="flex: 1;">⬅️ Setup</button>
+          <button id="topics-btn-start" class="primary" style="flex: 2;">Start Game 🚀</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Role Reveal Screen -->
+    <section id="screen-reveal-roles" class="screen">
+      <h2>Role Assignment</h2>
+      <p style="text-align: center;">Each player must privately look at their card. Do not show others!</p>
+
+      <div id="reveal-pass-container" class="reveal-pane hidden-state">
+        <div class="card-title">Secret Pass</div>
+        <div class="pass-instruction">Pass device to <span id="reveal-player-name" style="color: var(--primary);">Player</span></div>
+        <div class="tap-reveal-hint">Tap screen to reveal role...</div>
+      </div>
+
+      <div id="reveal-card-container" class="reveal-pane" style="display: none;">
+        <div class="role-reveal-box">
+          <div class="card-title"><span id="reveal-card-player-name">Player</span>'s Card</div>
+          <div id="reveal-badge" class="role-badge">Role</div>
+          
+          <div style="margin: 1.5rem 0;">
+            <div id="reveal-secret-label" style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase;">Your Secret Word</div>
+            <div id="reveal-secret-value" class="secret-word-display">Volcano</div>
+          </div>
+
+          <div id="reveal-secret-desc" class="secret-desc">Clues must match this category.</div>
+          <button id="reveal-btn-hide" class="secondary" style="margin-top: 1rem;">🔒 Tap to Hide Card</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <span id="reveal-progress-label">Player 1 of 4</span>
+        <button id="reveal-btn-continue" class="primary" disabled>Next Player ➡️</button>
+      </div>
+    </section>
+
+    <!-- 5. Clue Phase Screen -->
+    <section id="screen-clues" class="screen">
+      <div class="turn-header">
+        <div>
+          <h2>Clue Phase</h2>
+          <span id="clues-round-label" style="font-size: var(--text-xs); color: var(--cyan); text-transform: uppercase;">Round 1</span>
+        </div>
+        <div class="timer-circle-wrap" id="clues-timer-container" style="display: none;">
+          <svg class="timer-circle-svg">
+            <circle class="timer-circle-bg" cx="27" cy="27" r="23"></circle>
+            <circle id="clues-timer-progress" class="timer-circle-progress" cx="27" cy="27" r="23" stroke-dasharray="144.5" stroke-dashoffset="0"></circle>
+          </svg>
+          <span id="clues-timer-text" class="timer-text">30</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1rem;">
+        <div style="font-size: 3rem;">🎤</div>
+        <p style="font-size: var(--text-lg); font-weight: 600; color: var(--text-main);">Debates Out Loud</p>
+        <p style="color: var(--text-muted); font-size: var(--text-sm);">Each player takes turns saying their clue. Listen carefully to spot inconsistencies. Who is the imposter?</p>
+      </div>
+
+      <div id="clues-hint-box" class="reveal-pane" style="min-height: auto; padding: 1.25rem; border-style: solid; margin-bottom: 0.5rem; cursor: pointer; display: none;">
+        <span style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase;">Tap to View Secret Reminder</span>
+        <div id="clues-reminder-value" style="font-size: var(--text-lg); font-weight: 700; color: var(--cyan); margin-top: 0.2rem; display: none;">Volcano</div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
+        <button class="btn-end-game accent-red" style="flex: 1;">⏹️ End Game</button>
+        <button id="clues-btn-next" class="primary" style="flex: 2;">Start Discussion ➡️</button>
+      </div>
+    </section>
+
+    <!-- 6. Discussion Screen -->
+    <section id="screen-discussion" class="screen">
+      <div class="turn-header">
+        <h2>Discussion Phase</h2>
+        <div class="timer-circle-wrap" id="disc-timer-container" style="display: none;">
+          <svg class="timer-circle-svg">
+            <circle class="timer-circle-bg" cx="27" cy="27" r="23"></circle>
+            <circle id="disc-timer-progress" class="timer-circle-progress" cx="27" cy="27" r="23" stroke-dasharray="144.5" stroke-dashoffset="0"></circle>
+          </svg>
+          <span id="disc-timer-text" class="timer-text">120</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 2rem 0; display: flex; flex-direction: column; gap: 1rem;">
+        <div style="font-size: 4rem;">🗣️</div>
+        <p style="font-size: var(--text-lg); font-weight: 600; color: var(--text-main);">Debate and analyze clues!</p>
+        <p>Talk with the group. Who gave a suspicious clue or answered vaguely? Try to flush out the Imposter!</p>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
+        <button class="btn-end-game accent-red" style="flex: 1;">⏹️ End Game</button>
+        <button id="disc-btn-start-vote" class="primary" style="flex: 2;">Proceed to Voting 🗳️</button>
+      </div>
+    </section>
+
+    <!-- 7. Voting Screen -->
+    <section id="screen-voting" class="screen">
+      <h2>Report Vote Results</h2>
+      <p style="text-align: center;">After the group votes out loud and points, select who was eliminated:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin: 2rem 0;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label for="voting-select-player" style="font-weight: 600; color: var(--cyan);">Who was voted out?</label>
+          <select id="voting-select-player" style="padding: 0.75rem; font-size: var(--text-md); border-radius: 0.5rem;">
+            <option value="">-- Select Player --</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
+        <button class="btn-end-game accent-red" style="flex: 1;">⏹️ End Game</button>
+        <button id="voting-btn-confirm" class="primary" style="flex: 2;">Reveal Results 🎭</button>
+      </div>
+    </section>
+
+    <!-- 8. Reveal Screen -->
+    <section id="screen-reveal-results" class="screen">
+      <h2>Elimination Reveal</h2>
+
+      <div class="reveal-dramatic">
+        <div id="reveal-eliminated-pre" class="eliminated-tagline">The votes are tallied. Voted out is...</div>
+        <div id="reveal-eliminated-name" class="eliminated-name">Player 2</div>
+        <div id="reveal-eliminated-role" class="reveal-role-reveal imposter">THE IMPOSTER!</div>
+      </div>
+
+      <!-- Imposter final guess (Mode A: Word, Mode B: Question) -->
+      <div id="reveal-guess-container" class="guess-prompt-container" style="display: none;">
+        <h3 style="text-align: center; color: var(--yellow);">🔴 Final Comeback Guess!</h3>
+        <p style="text-align: center; font-size: var(--text-sm); margin-bottom: 0.5rem;">
+          The Imposter gets one last chance to steal the victory. Guess the secret word/question!
+        </p>
+        <div class="guess-options-grid" id="reveal-guess-options">
+          <!-- 4 choice buttons -->
+        </div>
+      </div>
+
+      <!-- Result text displays after guess is complete -->
+      <div id="reveal-final-verdict" class="reveal-pane" style="display: none; min-height: auto; border-color: var(--cyan); background: hsla(182, 100%, 48%, 0.05); margin-top: 1rem;">
+        <h3 id="verdict-title" style="color: var(--cyan); font-weight: 700; text-align: center;">Verdict</h3>
+        <p id="verdict-desc" style="text-align: center; margin-top: 0.3rem;">Real Players win!</p>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <button class="btn-end-game accent-red" style="flex: 1;">⏹️ End Game</button>
+        <button id="reveal-btn-next-round" class="primary" style="flex: 2;">Continue Game ➡️</button>
+      </div>
+    </section>
+
+    <!-- 9. Scoreboard Screen -->
+    <section id="screen-scoreboard" class="screen">
+      <h2>Session Standings</h2>
+      
+      <div class="leaderboard-list" id="scoreboard-list">
+        <!-- Standings rows -->
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <button id="scoreboard-btn-lobby" style="flex: 1;">⬅️ Lobby</button>
+        <button id="scoreboard-btn-replay" class="primary" style="flex: 2;">Play Again 🔄</button>
+      </div>
+    </section>
+
+    <!-- 10. Custom Packs Screen -->
+    <section id="screen-custom-packs" class="screen">
+      <h2>Custom Topic Packs</h2>
+      
+      <div class="custom-pack-editor">
+        <h3>Create New Pack</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <input type="text" id="custom-pack-name" placeholder="Pack Title (e.g. Inside Jokes)">
+          <select id="custom-pack-mode">
+            <option value="word">Word Mode Pack</option>
+            <option value="question">Question Mode Pack</option>
+          </select>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="custom-pack-item-input" placeholder="Add word or question..." style="flex: 1;">
+            <button id="custom-pack-btn-add" class="secondary" style="padding: 0.5rem 0.75rem; font-size: var(--text-sm);">➕</button>
+          </div>
+        </div>
+
+        <div class="custom-items-list" id="custom-pack-preview-list">
+          <!-- Items added so far -->
+        </div>
+
+        <button id="custom-pack-btn-save" class="primary">💾 Save Pack</button>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <h3>My Custom Packs</h3>
+        <div class="category-grid" id="custom-packs-list" style="margin-top: 0.5rem; max-height: 150px;">
+          <!-- List of local saved custom packs -->
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <button id="custom-btn-back" style="flex: 1;">⬅️ Lobby</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal: Age Verification for 18+ content -->
+  <dialog id="modal-age-verification">
+    <h2 style="color: var(--red); text-align: center; margin-bottom: 0.5rem;">🔞 Age Verification Required</h2>
+    <p style="text-align: center;">You must be 18 years or older to unlock mature topics, alcohol drinking games, dark humor, and adult categories.</p>
+    <div class="modal-actions">
+      <button id="age-btn-deny" class="secondary">Cancel</button>
+      <button id="age-btn-confirm" class="primary" style="background: linear-gradient(135deg, var(--red) 0%, hsl(355, 90%, 50%) 100%);">Confirm I am 18+</button>
+    </div>
+  </dialog>
+
+  <!-- Modal: Game Rules -->
+  <dialog id="modal-rules">
+    <h2 style="text-align: center; margin-bottom: 1rem;">How to Play</h2>
+    <div style="display: flex; flex-direction: column; gap: 1rem; font-size: var(--text-sm); max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+      <p><strong>Overview:</strong> A social deduction game played in-person! All players receive a secret context except the Imposter(s). The group must deduce who is the imposter through clues while the imposter attempts to blend in.</p>
+      
+      <h3>🎮 Mode A: Secret Word</h3>
+      <p>All Real Players are shown a secret word (e.g. "Volcano"). The Imposter is shown only the Category (e.g. "Nature"). Each player takes turns <strong>saying a clue out loud</strong> that hints at the secret word. The Imposter must bluff and say a clue that fits the category.</p>
+
+      <h3>🎮 Mode B: Secret Question</h3>
+      <p>All Real Players are shown a secret question (e.g. "What is the first thing you do when you arrive at a hotel?"). The Imposter is shown a vague decoy question (e.g. "What is something you do in the morning?"). Each player <strong>answers out loud</strong>; the Imposter must answer convincingly to fit the group's conversation.</p>
+
+      <h3>💬 Discussion & Voting</h3>
+      <p>After all players give clues, the group <strong>debates out loud</strong>. Analyze the clues and try to identify the Imposter! Then, everyone <strong>points at the person they suspect</strong> on a count of three. The player with the most points is eliminated. Report the result to the app.</p>
+
+      <h3>🏆 Winning & Guessing</h3>
+      <p>If a Real Player is eliminated, the Imposter survives and wins the round. If the Imposter is eliminated, they get a dramatic comeback chance: the app presents them with 4 choices to guess the secret word or question. If they guess correctly, they steal the victory! Otherwise, the Real Players win.</p>
+    </div>
+    <div class="modal-actions">
+      <button id="rules-btn-close" class="primary">Got It!</button>
+    </div>
+  </dialog>
+
+  <!-- Modal: Accessibility Preferences Menu -->
+  <dialog id="modal-accessibility">
+    <h2 style="text-align: center; margin-bottom: 1rem;">Accessibility & Preferences</h2>
+    <div class="preferences-grid">
+      <div class="toggle-row">
+        <span>High Contrast Mode</span>
+        <button id="pref-btn-contrast">OFF</button>
+      </div>
+      <div class="toggle-row">
+        <span>Colorblind-Safe Colors</span>
+        <button id="pref-btn-colorblind">OFF</button>
+      </div>
+      <div class="toggle-row">
+        <span>Text Font Size</span>
+        <select id="pref-select-text-size">
+          <option value="sm">Small</option>
+          <option value="md" selected>Medium (Default)</option>
+          <option value="lg">Large</option>
+          <option value="xl">Extra Large</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="pref-btn-close" class="primary">Save & Apply</button>
+    </div>
+  </dialog>
+
+  <!-- Core App Controller Scripts -->
+  <script src="topics.js"></script>
+  <script src="sound.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
