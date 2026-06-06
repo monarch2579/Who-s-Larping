@@ -178,8 +178,8 @@ class Game {
 
   updateImposterCountBoundaries() {
     const count = this.players.length;
-    // Manual: allow 1 up to players-1 (at least one real player must exist)
-    const maxImposters = Math.max(1, count - 1);
+    // Max imposters: floor(players / 2), so never more than 50%
+    const maxImposters = Math.max(1, Math.floor(count / 2));
 
     // Clamp imposter count within valid range [1, maxImposters]
     if (this.imposterCount > maxImposters) {
@@ -206,7 +206,7 @@ class Game {
       minusBtn.disabled = true;
       plusBtn.disabled = true;
       valueSpan.style.opacity = '0.5';
-      // Random always spans 0 to players-1
+      // Random spans 0 up to floor(players/2)
       valueSpan.textContent = '🎲 0–' + maxImposters;
     } else {
       minusBtn.disabled = this.imposterCount <= 1;
@@ -386,8 +386,8 @@ class Game {
     this.roundScored = false;
     if (this.randomImpostersEnabled) {
       const count = this.players.length;
-      // Random range: 0 imposters (clean round) up to players-1 (one real player remains)
-      const maxImposters = Math.max(1, count - 1);
+      // Random range: 0 up to floor(players/2) — never more than 50%
+      const maxImposters = Math.max(1, Math.floor(count / 2));
       targetImposterCount = Math.floor(Math.random() * (maxImposters + 1)); // 0..maxImposters
       console.log(`[DEBUG] Secret random imposter count chosen: ${targetImposterCount}`);
     }
@@ -1118,7 +1118,7 @@ class Game {
 
     document.getElementById('setup-btn-imposter-plus').addEventListener('click', () => {
       sound.playClick();
-      const maxImposters = Math.max(1, this.players.length - 1);
+      const maxImposters = Math.max(1, Math.floor(this.players.length / 2));
       if (this.imposterCount < maxImposters) {
         this.imposterCount++;
       }
