@@ -188,6 +188,8 @@ button {
   transition: all var(--transition-fast);
   user-select: none;
   outline: none;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 button:hover {
@@ -515,7 +517,7 @@ dialog::backdrop {
 }
 
 .category-tag.family { background: var(--green-glow); color: var(--green); }
-.category-tag.standard { background: var(--yellow-glow); color: var(--yellow); }
+.category-tag.standard { background: var(--primary-glow); color: var(--primary); }
 .category-tag.adult { background: var(--red-glow); color: var(--red); }
 
 /* 4. Role Reveal Screen */
@@ -815,6 +817,18 @@ dialog::backdrop {
   text-transform: uppercase;
 }
 
+.reveal-role-reveal.imposter {
+  background: var(--red-glow);
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+
+.reveal-role-reveal.real-player {
+  background: var(--green-glow);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
 .guess-prompt-container {
   display: flex;
   flex-direction: column;
@@ -938,6 +952,10 @@ dialog::backdrop {
   font-size: var(--text-sm);
 }
 
+#custom-pack-btn-add {
+  min-width: 48px;
+}
+
 /* Accessibility Preferences Pane */
 .accessibility-bar {
   display: flex;
@@ -993,4 +1011,102 @@ dialog::backdrop {
   height: 100%;
   pointer-events: none;
   z-index: -1;
+}
+
+@media (max-width: 700px) {
+  body {
+    justify-content: flex-start;
+    padding: 0.75rem;
+  }
+
+  #app {
+    max-width: none;
+  }
+
+  .screen {
+    border-radius: 18px;
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  button {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 46vh;
+  }
+
+  .toggle-row,
+  .leaderboard-row {
+    gap: 0.75rem;
+  }
+
+  .secret-word-display,
+  .eliminated-name {
+    font-size: clamp(1.6rem, 9vw, var(--text-giant));
+  }
+
+  .reveal-pane {
+    min-height: 190px;
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --font-base: 15px;
+  }
+
+  .accessibility-bar {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .screen > div[style*="display: flex"][style*="gap: 1rem"],
+  .screen > div[style*="display: flex"][style*="gap: 0.5rem"] {
+    flex-direction: column;
+  }
+
+  .turn-header,
+  .toggle-row,
+  .leaderboard-row,
+  .player-row-setup {
+    align-items: stretch;
+  }
+
+  .turn-header,
+  .toggle-row,
+  .leaderboard-row {
+    flex-direction: column;
+  }
+
+  .stepper-container {
+    max-width: none;
+    width: 100%;
+  }
+
+  .player-row-setup {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 44px;
+  }
+
+  .player-row-setup button.delete-btn {
+    min-height: 44px;
+  }
+
+  .category-grid,
+  .guess-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  dialog {
+    padding: 1.25rem;
+  }
 }

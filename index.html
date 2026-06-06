@@ -81,6 +81,13 @@
             <span class="slider"></span>
           </label>
         </div>
+        <div class="toggle-row" id="setup-zero-imposters-row" style="margin-top: 0.2rem;">
+          <span style="font-size: var(--text-sm);">Dice Can Roll No Imposters</span>
+          <label class="switch">
+            <input type="checkbox" id="setup-toggle-zero-imposters">
+            <span class="slider"></span>
+          </label>
+        </div>
         <p id="setup-imposter-warning" style="color: var(--yellow); font-size: var(--text-xs); display: none;">
           ⚠️ Warning: High ratio of imposters (>40%) may lead to chaotic rounds!
         </p>
@@ -180,11 +187,6 @@
         <p style="color: var(--text-muted); font-size: var(--text-sm);">Each player takes turns saying their clue. Listen carefully to spot inconsistencies. Who is the imposter?</p>
       </div>
 
-      <div id="clues-hint-box" class="reveal-pane" style="min-height: auto; padding: 1.25rem; border-style: solid; margin-bottom: 0.5rem; cursor: pointer; display: none;">
-        <span style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase;">Tap to View Secret Reminder</span>
-        <div id="clues-reminder-value" style="font-size: var(--text-lg); font-weight: 700; color: var(--cyan); margin-top: 0.2rem; display: none;">Volcano</div>
-      </div>
-
       <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
         <button class="btn-end-game accent-red" style="flex: 1;">⏹️ End Game</button>
         <button id="clues-btn-next" class="primary" style="flex: 2;">Start Discussion ➡️</button>
@@ -219,13 +221,13 @@
     <!-- 7. Voting Screen -->
     <section id="screen-voting" class="screen">
       <h2>Report Vote Results</h2>
-      <p style="text-align: center;">After the group votes out loud and points, select who was eliminated:</p>
+      <p style="text-align: center;">After the group votes out loud, select who was eliminated or call it clean:</p>
 
       <div style="display: flex; flex-direction: column; gap: 1rem; margin: 2rem 0;">
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-          <label for="voting-select-player" style="font-weight: 600; color: var(--cyan);">Who was voted out?</label>
+          <label for="voting-select-player" style="font-weight: 600; color: var(--cyan);">What did the group decide?</label>
           <select id="voting-select-player" style="padding: 0.75rem; font-size: var(--text-md); border-radius: 0.5rem;">
-            <option value="">-- Select Player --</option>
+            <option value="">-- Select Result --</option>
           </select>
         </div>
       </div>
@@ -279,7 +281,7 @@
 
       <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
         <button id="scoreboard-btn-lobby" style="flex: 1;">⬅️ Lobby</button>
-        <button id="scoreboard-btn-replay" class="primary" style="flex: 2;">Play Again 🔄</button>
+        <button id="scoreboard-btn-replay" class="primary" style="flex: 2;">Choose Topic 🔄</button>
       </div>
     </section>
 
@@ -342,7 +344,7 @@
       <p>All Real Players are shown a secret word (e.g. "Volcano"). The Imposter is shown only the Category (e.g. "Nature"). Each player takes turns <strong>saying a clue out loud</strong> that hints at the secret word. The Imposter must bluff and say a clue that fits the category.</p>
 
       <h3>🎮 Mode B: Secret Question</h3>
-      <p>All Real Players are shown a secret question (e.g. "What is the first thing you do when you arrive at a hotel?"). The Imposter is shown a vague decoy question (e.g. "What is something you do in the morning?"). Each player <strong>answers out loud</strong>; the Imposter must answer convincingly to fit the group's conversation.</p>
+      <p>All Real Players are shown the same personal question. The Imposter is shown a nearby question and must answer convincingly to fit the group's conversation.</p>
 
       <h3>💬 Discussion & Voting</h3>
       <p>After all players give clues, the group <strong>debates out loud</strong>. Analyze the clues and try to identify the Imposter! Then, everyone <strong>points at the person they suspect</strong> on a count of three. The player with the most points is eliminated. Report the result to the app.</p>

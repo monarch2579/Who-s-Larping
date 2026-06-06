@@ -87,6 +87,9 @@ class Game {
     this.secretQuestion = '';
     this.categoryName = '';
     this.questionDecoy = '';
+    this.currentRoundInitialImposterCount = 1;
+    this.roundOutcome = null;
+    this.roundScored = false;
     
     this.roundNumber = 1;
     this.clues = [];
@@ -102,6 +105,7 @@ class Game {
     this.discussionTimerVal = 120;
     this.adultContentEnabled = false;
     this.randomImpostersEnabled = false;
+    this.zeroImpostersEnabled = false;
     
     this.timerInterval = null;
     this.timeLeft = 0;
@@ -202,7 +206,7 @@ class Game {
       minusBtn.disabled = true;
       plusBtn.disabled = true;
       valueSpan.style.opacity = '0.5';
-      valueSpan.textContent = '🎲';
+      valueSpan.textContent = this.zeroImpostersEnabled ? '🎲 0+' : '🎲';
     } else {
       minusBtn.disabled = this.imposterCount <= 1;
       plusBtn.disabled = this.imposterCount >= maxImposters;
@@ -256,7 +260,6 @@ class Game {
     } else if (screenId === 'screen-clues') {
       this.activePlayerIndex = 0;
       this.clues = []; // clear clues from any prior round
-      this.populateClueHintBox();
       document.getElementById('clues-round-label').textContent = `Round ${this.roundNumber}`;
     } else if (screenId === 'screen-discussion') {
       this.renderDiscussionView();
@@ -279,9 +282,9 @@ class Game {
     // Extract categories matching mode and ratings
     const source = TOPICS[this.gameMode];
     
-    // Add family categories
+    // Add standard categories
     Object.keys(source.family).forEach(cat => {
-      categories.push({ name: cat, tier: 'family', custom: false });
+      categories.push({ name: cat, tier: 'standard', custom: false });
     });
 
     // Add 18+ categories if enabled
@@ -309,9 +312,10 @@ class Game {
     filtered.forEach(cat => {
       const card = document.createElement('div');
       card.className = `category-card ${this.selectedCategory === cat.name ? 'selected' : ''}`;
+      const tierLabel = cat.tier === 'standard' ? 'Classic' : cat.tier;
       card.innerHTML = `
         <span style="font-weight: 600; font-size: var(--text-sm);">${cat.name}</span>
-        <span class="category-tag ${cat.tier}">${cat.tier}</span>
+        <span class="category-tag ${cat.tier}">${tierLabel}</span>
       `;
       
       card.addEventListener('click', () => {
@@ -359,9 +363,9 @@ class Game {
       const randIndex = Math.floor(Math.random() * items.length);
       this.secretQuestion = items[randIndex];
       
-      // Decoy questions logic
+      // Nearby question logic for imposters
       const decoys = items.filter(q => q !== this.secretQuestion);
-      this.questionDecoy = decoys[Math.floor(Math.random() * decoys.length)] || "What is a standard topic that you would discuss?";
+      this.questionDecoy = decoys[Math.floor(Math.random() * decoys.length)] || "What is something people might not know about you?";
     }
 
     return true;
@@ -376,21 +380,16 @@ class Game {
     });
 
     let targetImposterCount = this.imposterCount;
+    this.roundScored = false;
     if (this.randomImpostersEnabled) {
       const count = this.players.length;
-      const rand = Math.random();
-      // Always assign at least 1 imposter — 0 imposters makes the game unplayable
-      if (count <= 5) {
-        targetImposterCount = 1; // small groups always get exactly 1
-      } else if (count <= 9) {
-        // 1 or 2 imposters (60% chance of 1, 40% chance of 2)
-        targetImposterCount = rand < 0.6 ? 1 : 2;
-      } else {
-        // 2 or 3 imposters (40% chance of 2, 60% chance of 3)
-        targetImposterCount = rand < 0.4 ? 2 : 3;
-      }
+      const maxImposters = Math.max(1, Math.floor(count / 2));
+      const minImposters = this.zeroImpostersEnabled ? 0 : 1;
+      targetImposterCount = Math.floor(Math.random() * (maxImposters - minImposters + 1)) + minImposters;
       console.log(`[DEBUG] Secret random imposter count chosen: ${targetImposterCount}`);
     }
+    this.currentRoundInitialImposterCount = targetImposterCount;
+    this.roundOutcome = null;
 
     // Shuffle and pick imposters
     const indices = Array.from({ length: this.players.length }, (_, i) => i);
@@ -470,19 +469,19 @@ class Game {
     const value = document.getElementById('reveal-secret-value');
     const desc = document.getElementById('reveal-secret-desc');
 
-    if (player.isImposter) {
+    if (player.isImposter && this.gameMode === 'question') {
+      badge.textContent = "Real Player";
+      badge.className = "role-badge real-player";
+      label.textContent = "Secret Question";
+      value.textContent = this.questionDecoy;
+      desc.textContent = "Answer this question truthfully. Watch out for vague answers from the Fake!";
+    } else if (player.isImposter) {
       badge.textContent = "Imposter";
       badge.className = "role-badge imposter";
       
-      if (this.gameMode === 'word') {
-        label.textContent = "Your Category";
-        value.textContent = this.categoryName;
-        desc.textContent = "You do not know the secret word. Bluff your way through using this category hint!";
-      } else {
-        label.textContent = "Your Question";
-        value.textContent = this.questionDecoy;
-        desc.textContent = "This is a decoy question! You must answer it convincingly to blend in with the others.";
-      }
+      label.textContent = "Your Category";
+      value.textContent = this.categoryName;
+      desc.textContent = "You do not know the secret word. Bluff your way through using this category hint!";
     } else {
       badge.textContent = "Real Player";
       badge.className = "role-badge real-player";
@@ -499,23 +498,6 @@ class Game {
     }
 
     document.getElementById('reveal-btn-continue').disabled = false;
-  }
-
-  // --- Populate the secret hint box on the clue screen ---
-  populateClueHintBox() {
-    const hintBox = document.getElementById('clues-hint-box');
-    const reminderValue = document.getElementById('clues-reminder-value');
-    if (!hintBox || !reminderValue) return;
-
-    // Always start with reminder hidden — each player taps individually
-    reminderValue.style.display = 'none';
-    hintBox.style.display = 'block';
-
-    if (this.gameMode === 'word') {
-      reminderValue.textContent = `\uD83D\uDD11 ${this.secretWord}   (Category: ${this.categoryName})`;
-    } else {
-      reminderValue.textContent = `\u2753 ${this.secretQuestion}`;
-    }
   }
 
   // --- Clue turns logic ---
@@ -579,7 +561,12 @@ class Game {
   renderVotingGrid() {
     // Populate dropdown with alive players
     const select = document.getElementById('voting-select-player');
-    select.innerHTML = '<option value="">-- Select Player --</option>';
+    select.innerHTML = '<option value="">-- Select Result --</option>';
+
+    const nobodyOption = document.createElement('option');
+    nobodyOption.value = '__none__';
+    nobodyOption.textContent = 'No one is the imposter';
+    select.appendChild(nobodyOption);
 
     this.players.forEach(player => {
       if (player.alive) {
@@ -598,7 +585,12 @@ class Game {
     const selectedIdRaw = document.getElementById('voting-select-player').value;
     
     if (!selectedIdRaw) {
-      alert('Please select a player who was voted out');
+      alert('Please select a result');
+      return;
+    }
+
+    if (selectedIdRaw === '__none__') {
+      this.showNoImposterResult();
       return;
     }
 
@@ -615,9 +607,46 @@ class Game {
     this.showRevealResults(elimPlayer);
   }
 
+  showNoImposterResult() {
+    const hadImposters = this.players.some(p => p.isImposter);
+    this.showScreen('screen-reveal-results');
+
+    document.getElementById('reveal-eliminated-pre').textContent = 'The group called it clean.';
+    document.getElementById('reveal-eliminated-name').textContent = 'No one';
+    const roleBadge = document.getElementById('reveal-eliminated-role');
+    roleBadge.textContent = hadImposters ? 'IMPOSTERS SLIPPED THROUGH' : 'NO IMPOSTERS THIS ROUND';
+    roleBadge.className = hadImposters ? 'reveal-role-reveal imposter' : 'reveal-role-reveal real-player';
+
+    document.getElementById('reveal-guess-container').style.display = 'none';
+    const finalVerdict = document.getElementById('reveal-final-verdict');
+    finalVerdict.style.display = 'block';
+
+    const title = document.getElementById('verdict-title');
+    const desc = document.getElementById('verdict-desc');
+    const nextBtn = document.getElementById('reveal-btn-next-round');
+    nextBtn.disabled = false;
+    nextBtn.textContent = 'Show Scoreboard ➡️';
+
+    if (hadImposters) {
+      this.roundOutcome = 'imposters_survived';
+      title.textContent = '🚨 IMPOSTER VICTORY! 🚨';
+      title.style.color = 'var(--red)';
+      desc.textContent = 'The group stopped voting while at least one Imposter was still hidden.';
+      sound.playFailure();
+    } else {
+      this.roundOutcome = 'clean_round';
+      title.textContent = '✅ CLEAN ROUND!';
+      title.style.color = 'var(--green)';
+      desc.textContent = 'There were no imposters. The group read the room correctly.';
+      sound.playSuccess();
+    }
+    this.applyRoundScore();
+  }
+
   showRevealResults(elimPlayer) {
     this.showScreen('screen-reveal-results');
 
+    document.getElementById('reveal-eliminated-pre').textContent = 'The votes are tallied. Voted out is...';
     document.getElementById('reveal-eliminated-name').textContent = elimPlayer.name;
     const roleBadge = document.getElementById('reveal-eliminated-role');
     const guessContainer = document.getElementById('reveal-guess-container');
@@ -626,17 +655,24 @@ class Game {
     // Hide continue initially until guess phase is done
     const nextBtn = document.getElementById('reveal-btn-next-round');
     nextBtn.disabled = true;
-    nextBtn.textContent = "Calculate Score ➡️";
+    nextBtn.textContent = this.shouldContinueElimination() ? "Continue Elimination ➡️" : "Show Scoreboard ➡️";
 
     if (elimPlayer.isImposter) {
       roleBadge.textContent = "THE IMPOSTER!";
       roleBadge.className = "reveal-role-reveal imposter";
       sound.playSuccess(); // Voted out imposter is success for real players
 
-      // Reveal guess pack choice grid
-      guessContainer.style.display = 'block';
-      finalVerdict.style.display = 'none';
-      this.renderGuessOptions();
+      if (this.shouldContinueElimination()) {
+        guessContainer.style.display = 'none';
+        finalVerdict.style.display = 'block';
+        this.renderEliminationStatus();
+        nextBtn.disabled = false;
+      } else {
+        // Reveal guess pack choice grid
+        guessContainer.style.display = 'block';
+        finalVerdict.style.display = 'none';
+        this.renderGuessOptions();
+      }
     } else {
       roleBadge.textContent = "A REAL PLAYER!";
       roleBadge.className = "reveal-role-reveal real-player";
@@ -644,21 +680,69 @@ class Game {
 
       guessContainer.style.display = 'none';
       finalVerdict.style.display = 'block';
-      
-      // Since a real player is voted out, Imposter survives and wins!
-      document.getElementById('verdict-title').textContent = "🚨 IMPOSTER VICTORY! 🚨";
-      document.getElementById('verdict-title').style.color = "var(--red)";
-      
-      const impNames = this.players.filter(p => p.isImposter).map(p => p.name).join(', ');
-      document.getElementById('verdict-desc').textContent = `The Imposter (${impNames}) successfully bluffed and survived!`;
-      
-      // Update scores
-      this.players.forEach(p => {
-        if (p.isImposter) p.score += 3; // +3 pts for surviving
-        else if (p.alive) p.score += 1; // +1 pt for surviving a round (though eliminated real player gets 0)
-      });
-      
+      this.renderEliminationStatus();
       nextBtn.disabled = false;
+    }
+  }
+
+  shouldContinueElimination() {
+    const alivePlayers = this.players.filter(p => p.alive);
+    const aliveImposters = alivePlayers.filter(p => p.isImposter);
+    return this.currentRoundInitialImposterCount > 2 && aliveImposters.length > 0 && alivePlayers.length > 2;
+  }
+
+  renderEliminationStatus() {
+    const title = document.getElementById('verdict-title');
+    const desc = document.getElementById('verdict-desc');
+
+    if (this.shouldContinueElimination()) {
+      title.textContent = 'Keep Voting';
+      title.style.color = 'var(--yellow)';
+      desc.textContent = 'More than two imposters started this round. Keep eliminating or choose "No one is the imposter" when the group is done.';
+      return;
+    }
+
+    const aliveImposters = this.players.filter(p => p.alive && p.isImposter);
+    if (this.currentRoundInitialImposterCount === 0) {
+      this.roundOutcome = 'false_alarm';
+      title.textContent = 'FALSE ALARM';
+      title.style.color = 'var(--yellow)';
+      desc.textContent = 'There were no imposters, but the group still voted someone out.';
+      sound.playFailure();
+    } else if (aliveImposters.length === 0) {
+      this.roundOutcome = 'real_players_win';
+      title.textContent = '👥 REAL PLAYERS WIN! 👥';
+      title.style.color = 'var(--green)';
+      desc.textContent = 'All imposters have been eliminated.';
+      sound.playSuccess();
+    } else {
+      this.roundOutcome = 'imposters_survived';
+      title.textContent = '🚨 IMPOSTER VICTORY! 🚨';
+      title.style.color = 'var(--red)';
+      const impNames = aliveImposters.map(p => p.name).join(', ');
+      desc.textContent = `The Imposter side survived (${impNames}).`;
+      sound.playFailure();
+    }
+    this.applyRoundScore();
+  }
+
+  applyRoundScore() {
+    if (!this.roundOutcome || this.roundScored) return;
+    this.roundScored = true;
+
+    if (this.roundOutcome === 'imposters_guess') {
+      this.players.forEach(p => {
+        if (p.isImposter) p.score += 5;
+      });
+    } else if (this.roundOutcome === 'imposters_survived') {
+      this.players.forEach(p => {
+        if (p.isImposter) p.score += 3;
+        else if (p.alive) p.score += 1;
+      });
+    } else if (this.roundOutcome === 'real_players_win' || this.roundOutcome === 'clean_round') {
+      this.players.forEach(p => {
+        if (!p.isImposter) p.score += 2;
+      });
     }
   }
 
@@ -690,24 +774,17 @@ class Game {
           title.textContent = "🏆 IMPOSTER STEALS THE WIN! 🏆";
           title.style.color = "var(--yellow)";
           desc.textContent = `The Imposter correctly guessed the secret: "${correct}"! (+5 pts)`;
-          
-          // Imposter gets +5 pts
-          this.players.forEach(p => {
-            if (p.isImposter) p.score += 5;
-          });
+          this.roundOutcome = 'imposters_guess';
         } else {
           // Imposter failed guess
           sound.playFailure();
           title.textContent = "👥 REAL PLAYERS WIN! 👥";
           title.style.color = "var(--green)";
           desc.textContent = `The Imposter failed the final guess! They chose "${opt}" but the secret was "${correct}". (+2 pts for Real Players)`;
-          
-          // Real players get +2 pts
-          this.players.forEach(p => {
-            if (!p.isImposter) p.score += 2;
-          });
+          this.roundOutcome = 'real_players_win';
         }
 
+        this.applyRoundScore();
         document.getElementById('reveal-btn-next-round').disabled = false;
       });
 
@@ -734,7 +811,7 @@ class Game {
       row.innerHTML = `
         <div class="leaderboard-player-info">
           <div class="rank-badge${medal}">${index + 1}</div>
-          <div class="leaderboard-player-name">${player.name} ${player.isImposter ? '<span style="color: var(--red); font-size: 0.75rem;">(Imposter)</span>' : ''}</div>
+          <div class="leaderboard-player-name">${player.name}</div>
         </div>
         <div class="leaderboard-score">${player.score} pts</div>
       `;
@@ -971,6 +1048,7 @@ class Game {
     document.getElementById('setup-mode-word').addEventListener('click', () => {
       sound.playClick();
       this.gameMode = 'word';
+      this.selectedCategory = null;
       document.getElementById('setup-mode-word').className = 'primary';
       document.getElementById('setup-mode-question').className = '';
     });
@@ -978,6 +1056,7 @@ class Game {
     document.getElementById('setup-mode-question').addEventListener('click', () => {
       sound.playClick();
       this.gameMode = 'question';
+      this.selectedCategory = null;
       document.getElementById('setup-mode-word').className = '';
       document.getElementById('setup-mode-question').className = 'primary';
     });
@@ -1026,6 +1105,12 @@ class Game {
       this.updateImposterCountBoundaries();
     });
 
+    document.getElementById('setup-toggle-zero-imposters').addEventListener('change', (e) => {
+      sound.playClick();
+      this.zeroImpostersEnabled = e.target.checked;
+      this.updateImposterCountBoundaries();
+    });
+
     // Timers config toggle (optional; the current setup screen omits these controls)
     const timerToggle = document.getElementById('setup-toggle-timers');
     const timerConfig = document.getElementById('setup-timers-config');
@@ -1046,6 +1131,7 @@ class Game {
         document.getElementById('modal-age-verification').showModal();
       } else {
         this.adultContentEnabled = false;
+        this.selectedCategory = null;
       }
     });
 
@@ -1053,6 +1139,7 @@ class Game {
       sound.playClick();
       document.getElementById('modal-age-verification').close();
       this.adultContentEnabled = false;
+      this.selectedCategory = null;
       document.getElementById('setup-toggle-adult').checked = false;
     });
 
@@ -1152,12 +1239,6 @@ class Game {
       }
     });
 
-    // Screen 5: Clues Phase - Show secret reminder
-    document.getElementById('clues-hint-box').addEventListener('click', () => {
-      const reminder = document.getElementById('clues-reminder-value');
-      reminder.style.display = reminder.style.display === 'none' ? 'block' : 'none';
-    });
-
     // Screen 5: Clues Phase - Go to Discussion
     document.getElementById('clues-btn-next').addEventListener('click', () => {
       sound.playClick();
@@ -1184,23 +1265,13 @@ class Game {
     // Screen 8: Reveal Screen Continue Button
     document.getElementById('reveal-btn-next-round').addEventListener('click', () => {
       sound.playClick();
-      
-      // Determine if there is still an Imposter alive
-      const aliveImposters = this.players.filter(p => p.alive && p.isImposter);
-      const aliveReals = this.players.filter(p => p.alive && !p.isImposter);
 
-      // Game over if all imposters are eliminated or real players can no longer outnumber imposters
-      if (aliveImposters.length === 0 || aliveReals.length <= aliveImposters.length) {
-        this.showScreen('screen-scoreboard');
-      } else {
-        // Start next round with a new secret — roles stay the same
-        this.roundNumber++;
-        this.clues = []; // clear clues for the new round
-        const success = this.generateGameSecret();
-        if (success) {
-          this.showScreen('screen-clues');
-        }
+      if (this.shouldContinueElimination()) {
+        this.showScreen('screen-voting');
+        return;
       }
+
+      this.showScreen('screen-scoreboard');
     });
 
     // Screen 9: Scoreboard screen Buttons
@@ -1215,19 +1286,15 @@ class Game {
       sound.playClick();
       this.roundNumber = 1;
       this.clues = [];
-      // Full reset — scores, alive status, roles all cleared
       this.players.forEach(p => {
         p.alive = true;
-        p.score = 0;
         p.isImposter = false;
         p.role = 'real';
       });
-      
-      const success = this.generateGameSecret();
-      if (success) {
-        this.assignRoles();
-        this.showScreen('screen-reveal-roles');
-      }
+      this.selectedCategory = null;
+      this.roundOutcome = null;
+      this.roundScored = false;
+      this.showScreen('screen-topics');
     });
 
     // End Game buttons (on all game screens)
