@@ -81,13 +81,6 @@
             <span class="slider"></span>
           </label>
         </div>
-        <div class="toggle-row" id="setup-zero-imposters-row" style="margin-top: 0.2rem;">
-          <span style="font-size: var(--text-sm);">Dice Can Roll No Imposters</span>
-          <label class="switch">
-            <input type="checkbox" id="setup-toggle-zero-imposters">
-            <span class="slider"></span>
-          </label>
-        </div>
         <p id="setup-imposter-warning" style="color: var(--yellow); font-size: var(--text-xs); display: none;">
           ⚠️ Warning: High ratio of imposters (>40%) may lead to chaotic rounds!
         </p>
@@ -133,15 +126,15 @@
       </div>
     </section>
 
-    <!-- 4. Role Reveal Screen -->
+    <!-- 4. Role Reveal Screen (Word mode + Question mode combined) -->
     <section id="screen-reveal-roles" class="screen">
-      <h2>Role Assignment</h2>
-      <p style="text-align: center;">Each player must privately look at their card. Do not show others!</p>
+      <h2>Secret Cards</h2>
+      <p style="text-align: center;">Pass the device to each player privately. Do not show others!</p>
 
       <div id="reveal-pass-container" class="reveal-pane hidden-state">
         <div class="card-title">Secret Pass</div>
         <div class="pass-instruction">Pass device to <span id="reveal-player-name" style="color: var(--primary);">Player</span></div>
-        <div class="tap-reveal-hint">Tap screen to reveal role...</div>
+        <div class="tap-reveal-hint">Tap screen to reveal your card...</div>
       </div>
 
       <div id="reveal-card-container" class="reveal-pane" style="display: none;">
@@ -155,7 +148,14 @@
           </div>
 
           <div id="reveal-secret-desc" class="secret-desc">Clues must match this category.</div>
-          <button id="reveal-btn-hide" class="secondary" style="margin-top: 1rem;">🔒 Tap to Hide Card</button>
+
+          <!-- Answer input — shown in question mode only -->
+          <div id="reveal-answer-section" style="display: none; margin-top: 1.25rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
+            <div style="font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">Your Answer</div>
+            <textarea id="reveal-answer-input" placeholder="Type your answer here..." rows="3" style="width: 100%; box-sizing: border-box; padding: 0.75rem; font-size: var(--text-md); border-radius: 0.5rem; border: 1px solid var(--border-light); background: var(--surface); color: var(--text-main); resize: none; font-family: inherit;"></textarea>
+          </div>
+
+          <button id="reveal-btn-hide" class="secondary" style="margin-top: 1rem;">🔒 Done — Hide &amp; Pass</button>
         </div>
       </div>
 
@@ -185,6 +185,12 @@
         <div style="font-size: 3rem;">🎤</div>
         <p style="font-size: var(--text-lg); font-weight: 600; color: var(--text-main);">Debates Out Loud</p>
         <p style="color: var(--text-muted); font-size: var(--text-sm);">Each player takes turns saying their clue. Listen carefully to spot inconsistencies. Who is the imposter?</p>
+      </div>
+
+      <!-- Answer recap for Question mode — visible at start of clue phase -->
+      <div id="clues-answers-recap" style="display: none; margin-bottom: 1rem;">
+        <div style="font-size: var(--text-sm); font-weight: 700; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.5rem;">📋 Everyone's Answers</div>
+        <div id="clues-answers-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
       </div>
 
       <div style="display: flex; gap: 1rem; border-top: 1px solid var(--border-light); padding-top: 1rem; margin-top: auto;">
