@@ -94,6 +94,7 @@ class Game {
     this.roundNumber = 1;
     this.clues = [];
     this.votes = {}; // voterId -> votedId
+    this.playerAnswers = []; // { playerId, playerName, answer } — question mode only
     
     // Stage indices for flow
     this.activePlayerIndex = 0;
@@ -105,7 +106,6 @@ class Game {
     this.discussionTimerVal = 120;
     this.adultContentEnabled = false;
     this.randomImpostersEnabled = false;
-    this.zeroImpostersEnabled = false;
     
     this.timerInterval = null;
     this.timeLeft = 0;
@@ -178,8 +178,8 @@ class Game {
 
   updateImposterCountBoundaries() {
     const count = this.players.length;
-    // Allow up to half the players as imposters — with 4 players that means 2
-    const maxImposters = Math.max(1, Math.floor(count / 2));
+    // Manual: allow 1 up to players-1 (at least one real player must exist)
+    const maxImposters = Math.max(1, count - 1);
 
     // Clamp imposter count within valid range [1, maxImposters]
     if (this.imposterCount > maxImposters) {
@@ -206,7 +206,8 @@ class Game {
       minusBtn.disabled = true;
       plusBtn.disabled = true;
       valueSpan.style.opacity = '0.5';
-      valueSpan.textContent = this.zeroImpostersEnabled ? '🎲 0+' : '🎲';
+      // Random always spans 0 to players-1
+      valueSpan.textContent = '🎲 0–' + maxImposters;
     } else {
       minusBtn.disabled = this.imposterCount <= 1;
       plusBtn.disabled = this.imposterCount >= maxImposters;
@@ -256,11 +257,13 @@ class Game {
       this.renderTopicGrid();
     } else if (screenId === 'screen-reveal-roles') {
       this.activePlayerIndex = 0;
+      this.playerAnswers = [];
       this.renderRevealPass();
     } else if (screenId === 'screen-clues') {
       this.activePlayerIndex = 0;
       this.clues = []; // clear clues from any prior round
       document.getElementById('clues-round-label').textContent = `Round ${this.roundNumber}`;
+      this.renderCluesAnswersRecap();
     } else if (screenId === 'screen-discussion') {
       this.renderDiscussionView();
     } else if (screenId === 'screen-voting') {
@@ -383,9 +386,9 @@ class Game {
     this.roundScored = false;
     if (this.randomImpostersEnabled) {
       const count = this.players.length;
-      const maxImposters = Math.max(1, Math.floor(count / 2));
-      const minImposters = this.zeroImpostersEnabled ? 0 : 1;
-      targetImposterCount = Math.floor(Math.random() * (maxImposters - minImposters + 1)) + minImposters;
+      // Random range: 0 imposters (clean round) up to players-1 (one real player remains)
+      const maxImposters = Math.max(1, count - 1);
+      targetImposterCount = Math.floor(Math.random() * (maxImposters + 1)); // 0..maxImposters
       console.log(`[DEBUG] Secret random imposter count chosen: ${targetImposterCount}`);
     }
     this.currentRoundInitialImposterCount = targetImposterCount;
@@ -468,36 +471,60 @@ class Game {
     const label = document.getElementById('reveal-secret-label');
     const value = document.getElementById('reveal-secret-value');
     const desc = document.getElementById('reveal-secret-desc');
+    const answerSection = document.getElementById('reveal-answer-section');
+    const answerInput = document.getElementById('reveal-answer-input');
 
-    if (player.isImposter && this.gameMode === 'question') {
-      badge.textContent = "Real Player";
+    if (this.gameMode === 'question') {
+      // In question mode: everyone looks the same — no role label shown
+      // Imposter sees a decoy question, real players see the real question
+      const question = player.isImposter ? this.questionDecoy : this.secretQuestion;
+      badge.textContent = "Your Question";
       badge.className = "role-badge real-player";
-      label.textContent = "Secret Question";
-      value.textContent = this.questionDecoy;
-      desc.textContent = "Answer this question truthfully. Watch out for vague answers from the Fake!";
+      label.textContent = "Answer this privately";
+      value.textContent = question;
+      desc.textContent = "Read it, type your answer below, then pass the device.";
+      answerSection.style.display = 'block';
+      answerInput.value = '';
     } else if (player.isImposter) {
       badge.textContent = "Imposter";
       badge.className = "role-badge imposter";
-      
       label.textContent = "Your Category";
       value.textContent = this.categoryName;
       desc.textContent = "You do not know the secret word. Bluff your way through using this category hint!";
+      answerSection.style.display = 'none';
     } else {
       badge.textContent = "Real Player";
       badge.className = "role-badge real-player";
-      
-      if (this.gameMode === 'word') {
-        label.textContent = "Secret Word";
-        value.textContent = this.secretWord;
-        desc.textContent = `Category: ${this.categoryName}. Give a subtle hint to describe this word!`;
-      } else {
-        label.textContent = "Secret Question";
-        value.textContent = this.secretQuestion;
-        desc.textContent = "Answer this question truthfully. Watch out for vague answers from the Fake!";
-      }
+      label.textContent = "Secret Word";
+      value.textContent = this.secretWord;
+      desc.textContent = `Category: ${this.categoryName}. Give a subtle hint to describe this word!`;
+      answerSection.style.display = 'none';
     }
 
     document.getElementById('reveal-btn-continue').disabled = false;
+  }
+
+  renderCluesAnswersRecap() {
+    const recap = document.getElementById('clues-answers-recap');
+    const list = document.getElementById('clues-answers-list');
+
+    if (this.gameMode !== 'question' || this.playerAnswers.length === 0) {
+      recap.style.display = 'none';
+      return;
+    }
+
+    recap.style.display = 'block';
+    list.innerHTML = '';
+
+    this.playerAnswers.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = 'clue-row';
+      row.innerHTML = `
+        <span class="clue-player-name">${entry.playerName}</span>
+        <span class="clue-text">${entry.answer}</span>
+      `;
+      list.appendChild(row);
+    });
   }
 
   // --- Clue turns logic ---
@@ -1091,7 +1118,7 @@ class Game {
 
     document.getElementById('setup-btn-imposter-plus').addEventListener('click', () => {
       sound.playClick();
-      const maxImposters = Math.max(1, Math.floor(this.players.length / 2));
+      const maxImposters = Math.max(1, this.players.length - 1);
       if (this.imposterCount < maxImposters) {
         this.imposterCount++;
       }
@@ -1102,12 +1129,6 @@ class Game {
     document.getElementById('setup-toggle-random-imposters').addEventListener('change', (e) => {
       sound.playClick();
       this.randomImpostersEnabled = e.target.checked;
-      this.updateImposterCountBoundaries();
-    });
-
-    document.getElementById('setup-toggle-zero-imposters').addEventListener('change', (e) => {
-      sound.playClick();
-      this.zeroImpostersEnabled = e.target.checked;
       this.updateImposterCountBoundaries();
     });
 
@@ -1220,17 +1241,48 @@ class Game {
 
     document.getElementById('reveal-btn-hide').addEventListener('click', () => {
       sound.playClick();
+
+      // In question mode, collect the typed answer before passing
+      if (this.gameMode === 'question') {
+        const text = document.getElementById('reveal-answer-input').value.trim();
+        if (!text) {
+          alert("Please type your answer before passing the device.");
+          return;
+        }
+        const player = this.players[this.activePlayerIndex];
+        this.playerAnswers.push({
+          playerId: player.id,
+          playerName: player.name,
+          answer: text
+        });
+      }
+
       this.activePlayerIndex++;
       if (this.activePlayerIndex < this.players.length) {
         this.renderRevealPass();
       } else {
-        // Go to gameplay clue turns!
         this.showScreen('screen-clues');
       }
     });
 
     document.getElementById('reveal-btn-continue').addEventListener('click', () => {
       sound.playClick();
+
+      // In question mode, collect the typed answer before passing
+      if (this.gameMode === 'question') {
+        const text = document.getElementById('reveal-answer-input').value.trim();
+        if (!text) {
+          alert("Please type your answer before passing the device.");
+          return;
+        }
+        const player = this.players[this.activePlayerIndex];
+        this.playerAnswers.push({
+          playerId: player.id,
+          playerName: player.name,
+          answer: text
+        });
+      }
+
       this.activePlayerIndex++;
       if (this.activePlayerIndex < this.players.length) {
         this.renderRevealPass();
